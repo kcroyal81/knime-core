@@ -189,6 +189,7 @@ import org.knime.core.node.workflow.capture.WorkflowFragment;
 import org.knime.core.node.workflow.execresult.NodeContainerExecutionResult;
 import org.knime.core.node.workflow.execresult.NodeContainerExecutionStatus;
 import org.knime.core.node.workflow.execresult.WorkflowExecutionResult;
+import org.knime.core.node.workflow.virtual.AbstractVirtualWorkflowNodeModel;
 import org.knime.core.node.workflow.virtual.parchunk.ParallelizedChunkContent;
 import org.knime.core.node.workflow.virtual.parchunk.ParallelizedChunkContentMaster;
 import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkNodeInput;
@@ -3635,9 +3636,18 @@ public final class WorkflowManager extends NodeContainer
             }
             ParallelizedChunkContentMaster pccm =
                 new ParallelizedChunkContentMaster(subwfm, endNode, startNode.getNrRemoteChunks());
+            NativeNodeContainer endNC = (NativeNodeContainer)getNodeContainer(endID);
+            if (endNode instanceof AbstractVirtualWorkflowNodeModel) {
+                endNC.initLocalFileStoreHandler();
+            }
             for (int i = 0; i < startNode.getNrRemoteChunks(); i++) {
                 ParallelizedChunkContent copiedNodes =
                     duplicateLoopBodyInSubWFMandAttach(subwfm, extInConnections, startID, endID, loopNodes, i);
+                if (endNode instanceof AbstractVirtualWorkflowNodeModel) {
+                    ((AbstractVirtualWorkflowNodeModel)endNode).prepareVirtualWorkflowExecution(
+                        endNC.createExecutionContext(),
+                        (NativeNodeContainer)subwfm.getNodeContainer(copiedNodes.getVirtualInputID()));
+                }
                 copiedNodes.executeChunk();
                 pccm.addParallelChunk(i, copiedNodes);
             }
