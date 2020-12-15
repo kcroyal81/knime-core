@@ -98,6 +98,10 @@ public final class WizardExecutionController extends WebResourceController imple
      */
     private final List<NodeID> m_waitingSubnodes;
 
+    // TODO
+    // single page application
+    public NodeID m_reexecutingSubnode = null;
+
     private boolean m_hasExecutionStarted = false;
 
     private final Map<String, String> m_additionalProperties;
@@ -141,6 +145,12 @@ public final class WizardExecutionController extends WebResourceController imple
     @Override
     public void checkHaltingCriteria(final NodeID source) {
         assert m_manager.isLockedByCurrentThread();
+
+        if (source.equals(m_reexecutingSubnode)) {
+            m_reexecutingSubnode = null;
+            return;
+        }
+
         if (m_waitingSubnodes.remove(source)) {
             // trick to handle re-execution of SubNodes properly: when the node is already
             // in the list it was just re-executed and we don't add it to the list of halted
@@ -219,6 +229,21 @@ public final class WizardExecutionController extends WebResourceController imple
     public NodeID getCurrentWizardPageNodeID() {
         CheckUtils.checkState(hasCurrentWizardPage(), "No current wizard page");
         return m_waitingSubnodes.get(0);
+    }
+
+    /**
+     * @since 4.4
+     * @return
+     */
+    // TODO!!
+    public Optional<NodeID> getCurrentWizadPageNodeIDIfThereIsACurrentPage() {
+        // TODO allow current wizard page to be in execution
+        // in case of single page applications
+        if (m_waitingSubnodes.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(m_waitingSubnodes.get(0));
+
     }
 
     /**
@@ -328,7 +353,8 @@ public final class WizardExecutionController extends WebResourceController imple
             checkDiscard();
             NodeContext.pushContext(manager);
             try {
-                CheckUtils.checkState(hasCurrentWizardPageInternal(true), "No current wizard page");
+                // TODO
+                CheckUtils.checkState(hasCurrentWizardPageInternal(false), "No current wizard page");
                 return loadValuesIntoPageInternal(viewContentMap, m_waitingSubnodes.get(0), true, false);
             } finally {
                 NodeContext.removeLastContext();

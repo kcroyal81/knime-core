@@ -457,7 +457,7 @@ public abstract class WebResourceController {
         Set<HiLiteHandler> initialHiliteHandlerSet = new HashSet<HiLiteHandler>();
         SubNodeContainer subNC = manager.getNodeContainer(subnodeID, SubNodeContainer.class, true);
         LinkedHashMap<NodeIDSuffix, SubNodeContainer> sncMap = new LinkedHashMap<NodeIDSuffix, SubNodeContainer>();
-        findNestedViewNodes(subNC, resultMap, infoMap, sncMap, initialHiliteHandlerSet);
+        findNestedViewNodes(subNC, m_manager, resultMap, infoMap, sncMap, initialHiliteHandlerSet);
         NodeID.NodeIDSuffix pageID = NodeID.NodeIDSuffix.create(manager.getID(), subNC.getID());
         SubnodeContainerLayoutStringProvider layoutStringProvider = subNC.getSubnodeLayoutStringProvider();
         if (layoutStringProvider.isEmptyLayout()) {
@@ -506,10 +506,21 @@ public abstract class WebResourceController {
         return page;
     }
 
+    /**
+     * TODO
+     *
+     * @param subNC
+     * @param hostWFM
+     * @param resultMap
+     * @param infoMap
+     * @param sncMap
+     * @param initialHiliteHandlerSet
+     * @since 4.4
+     */
     @SuppressWarnings("rawtypes")
-    private void findNestedViewNodes(final SubNodeContainer subNC,
+    public static void findNestedViewNodes(final SubNodeContainer subNC, final WorkflowManager hostWFM,
         final Map<NodeIDSuffix, WizardNode> resultMap, final Map<NodeIDSuffix, WizardPageNodeInfo> infoMap,
-        final Map<NodeIDSuffix, SubNodeContainer>sncMap, final Set<HiLiteHandler> initialHiliteHandlerSet) {
+        final Map<NodeIDSuffix, SubNodeContainer> sncMap, final Set<HiLiteHandler> initialHiliteHandlerSet) {
         WorkflowManager subWFM = subNC.getWorkflowManager();
         Map<NodeID, WizardNode> wizardNodeMap = subWFM.findNodes(WizardNode.class, NOT_HIDDEN_FILTER, false);
         for (Map.Entry<NodeID, WizardNode> entry : wizardNodeMap.entrySet()) {
@@ -518,7 +529,7 @@ public abstract class WebResourceController {
                 //skip nodes in inactive branches
                 continue;
             }
-            NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(m_manager.getID(), entry.getKey());
+            NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(hostWFM.getID(), entry.getKey());
             WizardPageNodeInfo nodeInfo = new WizardPageNodeInfo();
             nodeInfo.setNodeName(nc.getName());
             nodeInfo.setNodeAnnotation(nc.getNodeAnnotation().toString());
@@ -540,9 +551,9 @@ public abstract class WebResourceController {
         for (Entry<NodeID, SubNodeContainer> entry : subnodeContainers.entrySet()) {
             SubNodeContainer snc = entry.getValue();
             if (isWizardPage(snc.getID(), subWFM)) {
-                NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(m_manager.getID(), snc.getID());
+                NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(hostWFM.getID(), snc.getID());
                 sncMap.put(idSuffix, snc);
-                findNestedViewNodes(snc, resultMap, infoMap, sncMap, initialHiliteHandlerSet);
+                findNestedViewNodes(snc, hostWFM, resultMap, infoMap, sncMap, initialHiliteHandlerSet);
             }
         }
     }
@@ -675,7 +686,12 @@ public abstract class WebResourceController {
                     + "consider to change component layout to have self-contained executable units",
                 subNodeNC.getNameWithID());
         }
-        manager.resetSubnodeForViewUpdate(subnodeID, this);
+
+        // TODO hack!!
+        if (manager.getNodeContainer(subnodeID).getNodeContainerState().isExecuted()) {
+            manager.resetSubnodeForViewUpdate(subnodeID, this);
+        }
+
         for (Map.Entry<String, String> entry : viewContentMap.entrySet()) {
             NodeID.NodeIDSuffix suffix = NodeID.NodeIDSuffix.fromString(entry.getKey());
             NodeID id = suffix.prependParent(manager.getID());
