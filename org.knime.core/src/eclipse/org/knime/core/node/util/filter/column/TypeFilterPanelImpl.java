@@ -157,15 +157,17 @@ final class TypeFilterPanelImpl extends JPanel {
         m_preview.setEnabled(enabled);
     }
 
-    /** @param config to load from
-     * @param spec specs of the available columns that will be shown in the selection preview */
+    /**
+     * @param config to load from
+     * @param spec specs of the available columns that will be shown in the selection preview
+     */
     void loadConfiguration(final TypeFilterConfigurationImpl config, final DataTableSpec spec) {
         m_tableSpec = spec;
         clearTypes();
         // ArrayList holding all the JPanels with the type checkboxes
         ArrayList<JPanel> checkboxes = new ArrayList<JPanel>();
         // add checkboxes from the DataTableSpec
-        checkboxes.addAll(getCheckBoxPanelsForDataColumns(spec));
+        checkboxes.addAll(getCheckBoxPanelsForDataColumns(spec, config.getFilter()));
         // add checkboxes for the default data values
         checkboxes.addAll(getCheckBoxPanelsForDataValues(DEFAULT_TYPES, spec));
         // add checkboxes from the configuration
@@ -178,15 +180,43 @@ final class TypeFilterPanelImpl extends JPanel {
                 box.setSelected(valueSelected);
             } else if (valueSelected) {
                 // type included by currently not in the input spec
-                checkboxes.add(getCheckBoxPanel(Optional.empty(), valueClassName, true, isEnabled(), valueClassName, true, false));
+                checkboxes.add(
+                    getCheckBoxPanel(Optional.empty(), valueClassName, true, isEnabled(), valueClassName, true, false));
             }
         }
         initTypeSelectionPanel(checkboxes);
-        update();
+        update(config.getFilter());
+    }
+
+    /**
+     * @param spec
+     * @param filter
+     * @return
+     */
+    private ArrayList<JPanel> getCheckBoxPanelsForDataColumns(final Iterable<DataColumnSpec> columns,
+        final InputFilter<DataColumnSpec> filter) {
+        ArrayList<JPanel> panels = new ArrayList<JPanel>();
+        for (DataColumnSpec column : columns) {
+            if (filter == null || filter.include(column)) {
+                Class<? extends DataValue> prefValueClass = column.getType().getPreferredValueClass();
+                if (!m_selections.containsKey(prefValueClass.getName())) {
+                    UtilityFactory utilityFor = DataType.getUtilityFor(prefValueClass);
+                    if (utilityFor instanceof ExtensibleUtilityFactory) {
+                        ExtensibleUtilityFactory eu = (ExtensibleUtilityFactory)utilityFor;
+                        String label = eu.getName();
+                        String key = prefValueClass.getName();
+                        panels.add(getCheckBoxPanel(Optional.of(utilityFor.getIcon()), label, false, isEnabled(), key,
+                            false, true));
+                    }
+                }
+            }
+        }
+        return panels;
     }
 
     /**
      * Initializes the type selection panel with the provided CheckBoxes
+     *
      * @param checkboxes List of JPanels containing the JCheckBoxes, an Icon depicting the type and a Label
      */
     private void initTypeSelectionPanel(final ArrayList<JPanel> checkboxes) {
@@ -227,30 +257,16 @@ final class TypeFilterPanelImpl extends JPanel {
      * @param columns The columns contained in the current data table.
      */
     private ArrayList<JPanel> getCheckBoxPanelsForDataColumns(final Iterable<DataColumnSpec> columns) {
-        ArrayList<JPanel> panels = new ArrayList<JPanel>();
-        for (DataColumnSpec column : columns) {
-            if (m_filter == null || m_filter.include(column)) {
-                Class<? extends DataValue> prefValueClass = column.getType().getPreferredValueClass();
-                if (!m_selections.containsKey(prefValueClass.getName())) {
-                    UtilityFactory utilityFor = DataType.getUtilityFor(prefValueClass);
-                    if (utilityFor instanceof ExtensibleUtilityFactory) {
-                        ExtensibleUtilityFactory eu = (ExtensibleUtilityFactory)utilityFor;
-                        String label = eu.getName();
-                        String key = prefValueClass.getName();
-                        panels.add(getCheckBoxPanel(Optional.of(utilityFor.getIcon()), label, false, isEnabled(), key, false, true));
-                    }
-                }
-            }
-        }
-        return panels;
+        return getCheckBoxPanelsForDataColumns(columns, m_filter);
     }
 
     /**
-     * Returns the type checkboxes (each in a JPanel) for the  data values.
+     * Returns the type checkboxes (each in a JPanel) for the data values.
      *
      * @param values The data values to add
      */
-    private ArrayList<JPanel> getCheckBoxPanelsForDataValues(final Iterable<Class<? extends DataValue>> values, final DataTableSpec spec) {
+    private ArrayList<JPanel> getCheckBoxPanelsForDataValues(final Iterable<Class<? extends DataValue>> values,
+        final DataTableSpec spec) {
         ArrayList<JPanel> panels = new ArrayList<JPanel>();
         for (Class<? extends DataValue> value : values) {
             if (isIncludedByFilter(value)) {
@@ -260,14 +276,14 @@ final class TypeFilterPanelImpl extends JPanel {
                         ExtensibleUtilityFactory eu = (ExtensibleUtilityFactory)utilityFor;
                         String label = eu.getName();
                         String key = value.getName();
-                        panels.add(getCheckBoxPanel(Optional.of(utilityFor.getIcon()), label, false, isEnabled(), key, false, false));
+                        panels.add(getCheckBoxPanel(Optional.of(utilityFor.getIcon()), label, false, isEnabled(), key,
+                            false, false));
                     }
                 }
             }
         }
         return panels;
     }
-
 
     /**
      * @param value
@@ -297,8 +313,9 @@ final class TypeFilterPanelImpl extends JPanel {
     }
 
     /**
-     * Returns a CheckBox with an icon and label representing the type.
-     * A red border is painted around the label if the type no longer exists in the input. The checkbox label is written italic if the type is not present in the DataTableSpec.
+     * Returns a CheckBox with an icon and label representing the type. A red border is painted around the label if the
+     * type no longer exists in the input. The checkbox label is written italic if the type is not present in the
+     * DataTableSpec.
      *
      * @param label label of the type
      * @param addRedBorderAsInvalid if a red border should be painted around the label
@@ -308,12 +325,13 @@ final class TypeFilterPanelImpl extends JPanel {
      * @param inDataTableSpec whether the type of this checkbox is contained in the DataTableSpec
      * @return
      */
-    private JPanel getCheckBoxPanel(final Optional<Icon> icon, final String label, final boolean addRedBorderAsInvalid, final boolean isEnabled, final String key,  final boolean setSelected, final boolean inDataTableSpec) {
+    private JPanel getCheckBoxPanel(final Optional<Icon> icon, final String label, final boolean addRedBorderAsInvalid,
+        final boolean isEnabled, final String key, final boolean setSelected, final boolean inDataTableSpec) {
         JPanel jp = new JPanel(new GridBagLayout());
         // Checkbox - no text
         final JCheckBox checkbox = new JCheckBox();
         // has to be executed before the ChangeListener is registered
-        if(setSelected) {
+        if (setSelected) {
             checkbox.setSelected(true);
         }
         checkbox.addChangeListener(new ChangeListener() {
@@ -395,6 +413,13 @@ final class TypeFilterPanelImpl extends JPanel {
      * Update the preview.
      */
     void update() {
+        update(m_filter);
+    }
+
+    /**
+     * @param filter
+     */
+    private void update(final InputFilter<DataColumnSpec> filter) {
         if (m_tableSpec == null) {
             return; // nothing to render (yet)
         }
@@ -402,8 +427,8 @@ final class TypeFilterPanelImpl extends JPanel {
         List<DataColumnSpec> excludes = new ArrayList<DataColumnSpec>();
         for (DataColumnSpec spec : m_tableSpec) {
             // Check if type is filtered out by filter of the node
-            if (m_filter != null) {
-                if (!m_filter.include(spec)) {
+            if (filter != null) {
+                if (!filter.include(spec)) {
                     continue;
                 }
             }

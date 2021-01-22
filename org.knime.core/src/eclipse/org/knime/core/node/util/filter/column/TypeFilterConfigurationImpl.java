@@ -176,6 +176,13 @@ final class TypeFilterConfigurationImpl implements Cloneable {
         m_selections = selections;
     }
 
+    /**
+     * @return the filter
+     */
+    InputFilter<DataColumnSpec> getFilter() {
+        return m_filter;
+    }
+
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
     @Override

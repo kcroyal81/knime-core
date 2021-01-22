@@ -308,10 +308,10 @@ public class PatternFilterPanel<T> extends JPanel {
     protected void loadConfiguration(final PatternFilterConfiguration config, final String[] names) {
         m_names = names;
         m_pattern.setText(config.getPattern());
-        if (config.getType().equals(PatternFilterType.Regex)) {
+        if (config.getType() == PatternFilterType.Regex) {
             m_regex.setSelected(true);
             refreshPatternFilterType();
-        } else if (config.getType().equals(PatternFilterType.Wildcard)) {
+        } else if (config.getType() == PatternFilterType.Wildcard) {
             m_wildcard.setSelected(true);
             refreshPatternFilterType();
         }

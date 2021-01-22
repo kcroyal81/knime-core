@@ -188,13 +188,13 @@ public class DataColumnSpecFilterPanel extends NameFilterPanel<DataColumnSpec> {
         m_typePanel.loadConfiguration(config.getTypeConfig(), spec);
         setTypeFilterEnabled(config.isTypeFilterEnabled());
         setNameFilter(config.getFilter());
-        super.loadConfiguration(config, spec == null ? new String[0] : toFilteredStringArray(spec));
+        super.loadConfiguration(config, spec == null ? new String[0] : toFilteredStringArray(spec, config.getFilter()));
     }
 
-    private String[] toFilteredStringArray(final DataTableSpec spec) {
-        ArrayList<String> acceptedInNames = new ArrayList<String>();
+    private static String[] toFilteredStringArray(final DataTableSpec spec, final InputFilter<DataColumnSpec> filter) {
+        ArrayList<String> acceptedInNames = new ArrayList<>();
         for (DataColumnSpec col : spec) {
-            if (m_filter == null || m_filter.include(col)) {
+            if (filter == null || filter.include(col)) {
                 String name = col.getName();
                 acceptedInNames.add(name);
             }
