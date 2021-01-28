@@ -506,33 +506,51 @@ public abstract class WebResourceController {
         return page;
     }
 
+    /**
+     * Collects different kind of infos for the 'wizard' nodes contained in a page (i.e. component). Nodes in nested
+     * pages are recursively collected, too.
+     *
+     * @param subNC the page to collect the info for
+     * @param resultMap the container for the collected {@link WizardNode}s, or <code>null</code> if it shouldn't be
+     *            collected
+     * @param infoMap the container for the collected {@link WizardPageNodeInfo}s, or <code>null</code> if it shouldn't
+     *            be collected
+     * @param sncMap the map of nested pages, or <code>null</code> if shouldn't be collected
+     * @param initialHiliteHandlerSet collected hilite handlers or <code>null</code> if it shouldn't be collected
+     */
     @SuppressWarnings("rawtypes")
-    private void findNestedViewNodes(final SubNodeContainer subNC,
+    protected static void findNestedViewNodes(final SubNodeContainer subNC,
         final Map<NodeIDSuffix, WizardNode> resultMap, final Map<NodeIDSuffix, WizardPageNodeInfo> infoMap,
-        final Map<NodeIDSuffix, SubNodeContainer>sncMap, final Set<HiLiteHandler> initialHiliteHandlerSet) {
+        final Map<NodeIDSuffix, SubNodeContainer> sncMap, final Set<HiLiteHandler> initialHiliteHandlerSet) {
         WorkflowManager subWFM = subNC.getWorkflowManager();
         Map<NodeID, WizardNode> wizardNodeMap = subWFM.findNodes(WizardNode.class, NOT_HIDDEN_FILTER, false);
+        WorkflowManager projectWFM = subNC.getProjectWFM();
         for (Map.Entry<NodeID, WizardNode> entry : wizardNodeMap.entrySet()) {
             NodeContainer nc = subWFM.getNodeContainer(entry.getKey());
             if ((nc instanceof SingleNodeContainer) && ((SingleNodeContainer)nc).isInactive()) {
                 //skip nodes in inactive branches
                 continue;
             }
-            NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(m_manager.getID(), entry.getKey());
-            WizardPageNodeInfo nodeInfo = new WizardPageNodeInfo();
-            nodeInfo.setNodeName(nc.getName());
-            nodeInfo.setNodeAnnotation(nc.getNodeAnnotation().toString());
-            nodeInfo.setNodeState(nc.getInternalState());
-            nodeInfo.setNodeMessage(nc.getNodeMessage());
-            infoMap.put(idSuffix, nodeInfo);
-            if (EXECUTED.equals(nc.getInternalState())) {
+            NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(projectWFM.getID(), entry.getKey());
+            if (infoMap != null) {
+                WizardPageNodeInfo nodeInfo = new WizardPageNodeInfo();
+                nodeInfo.setNodeName(nc.getName());
+                nodeInfo.setNodeAnnotation(nc.getNodeAnnotation().toString());
+                nodeInfo.setNodeState(nc.getInternalState());
+                nodeInfo.setNodeMessage(nc.getNodeMessage());
+                infoMap.put(idSuffix, nodeInfo);
+            }
+            if (EXECUTED.equals(nc.getInternalState()) && resultMap != null) {
                 //regular viewable nodes need to be executed
                 resultMap.put(idSuffix, entry.getValue());
             }
-            for (int i = 0; i < nc.getNrInPorts() - 1; i++) {
-                HiLiteHandler hiLiteHandler = ((NodeModel)entry.getValue()).getInHiLiteHandler(i);
-                if (hiLiteHandler != null) {
-                    initialHiliteHandlerSet.add(hiLiteHandler);
+
+            if (initialHiliteHandlerSet != null) {
+                for (int i = 0; i < nc.getNrInPorts() - 1; i++) {
+                    HiLiteHandler hiLiteHandler = ((NodeModel)entry.getValue()).getInHiLiteHandler(i);
+                    if (hiLiteHandler != null) {
+                        initialHiliteHandlerSet.add(hiLiteHandler);
+                    }
                 }
             }
         }
@@ -540,8 +558,10 @@ public abstract class WebResourceController {
         for (Entry<NodeID, SubNodeContainer> entry : subnodeContainers.entrySet()) {
             SubNodeContainer snc = entry.getValue();
             if (isWizardPage(snc.getID(), subWFM)) {
-                NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(m_manager.getID(), snc.getID());
-                sncMap.put(idSuffix, snc);
+                NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(projectWFM.getID(), snc.getID());
+                if (sncMap != null) {
+                    sncMap.put(idSuffix, snc);
+                }
                 findNestedViewNodes(snc, resultMap, infoMap, sncMap, initialHiliteHandlerSet);
             }
         }

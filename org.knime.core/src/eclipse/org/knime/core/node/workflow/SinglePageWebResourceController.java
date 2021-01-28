@@ -50,6 +50,7 @@ package org.knime.core.node.workflow;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -64,6 +65,7 @@ import org.knime.core.node.web.ValidationError;
 import org.knime.core.node.web.WebViewContent;
 import org.knime.core.node.wizard.WizardViewResponse;
 import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
+import org.knime.core.node.workflow.WebResourceController.WizardPageContent.WizardPageNodeInfo;
 
 /**
  * A utility class received from the workflow manager that allows controlling wizard execution and combined view creation on a single subnode.
@@ -154,6 +156,10 @@ public class SinglePageWebResourceController extends WebResourceController {
      * @param viewContentMap the values to validate
      * @param validate true, if validation is supposed to be done before applying the values, false otherwise
      * @param useAsDefault true, if the given value map is supposed to be applied as new node defaults (overwrite node settings), false otherwise (apply temporarily)
+     *
+     * @throws IllegalStateException if the page is executing or if the associated page is not the 'current' page
+     *             anymore (only if part of a workflow in wizard execution)
+     *
      * @return an empty map if validation succeeds, map of errors otherwise
      */
     public Map<String, ValidationError> loadValuesIntoPage(final Map<String, String> viewContentMap, final boolean validate, final boolean useAsDefault) {
@@ -222,6 +228,10 @@ public class SinglePageWebResourceController extends WebResourceController {
     /**
      * Validates a given set of serialized view values for the given subnode.
      * @param viewContentMap the values to validate
+     *
+     * @throws IllegalStateException if the page is executing or if the associated page is not the 'current' page
+     *             anymore (only if part of a workflow in wizard execution)
+     *
      * @return an empty map if validation succeeds, map of errors otherwise
      */
     public Map<String, ValidationError> validateViewValuesInPage(final Map<String, String> viewContentMap) {
@@ -263,6 +273,9 @@ public class SinglePageWebResourceController extends WebResourceController {
      *            <code>false</code>
      * @param useAsDefault true, if values are supposed to be applied as new defaults, false if applied temporarily
      *
+     * @throws IllegalStateException if the page is executing or if the associated page is not the 'current' page
+     *             anymore (only if part of a workflow in wizard execution)
+     *
      * @return empty map if validation succeeds, map of errors otherwise
      */
     public Map<String, ValidationError> reexecuteSinglePage(final Map<String, String> valueMap,
@@ -289,7 +302,10 @@ public class SinglePageWebResourceController extends WebResourceController {
      *            values
      * @param validate if <code>true</code>, validation will be done before applying the values, otherwise
      *            <code>false</code>
+     *
      * @throws IllegalArgumentException if the provided view node-id is not part of the wizard page
+     * @throws IllegalStateException if the page is executing or if the associated page is not the 'current' page
+     *             anymore (only if part of a workflow in wizard execution)
      *
      * @return empty map if validation succeeds, map of errors otherwise
      */
@@ -308,6 +324,18 @@ public class SinglePageWebResourceController extends WebResourceController {
             }
             return validationResult;
         }
+    }
+
+    /**
+     * Collects infos about the 'wizard' nodes contained in the page (i.e. component) associated with this controller.
+     * Nodes in nested pages are recursively collected, too.
+     *
+     * @return a map from node-id (suffix) to the page info ({@link WizardPageNodeInfo})
+     */
+    public Map<NodeIDSuffix, WizardPageNodeInfo> collectNestedWizardNodeInfos() {
+        Map<NodeIDSuffix, WizardPageNodeInfo> infoMap = new HashMap<>();
+        findNestedViewNodes((SubNodeContainer)m_manager.getNodeContainer(m_nodeID), null, infoMap, null, null);
+        return infoMap;
     }
 
     private static Collection<NodeContainer> getNodesToBeReexecuted(final NodeContainer nodeToReset) {
@@ -331,19 +359,19 @@ public class SinglePageWebResourceController extends WebResourceController {
                 throw new IllegalStateException(
                     "Invalid single page controller. Page doesn't match with the current page of the associated wizard executor.");
             }
-            if (isPageReexecutionInProgress()) {
+            if (getSinglePageExecutionState().isExecutionInProgress()) {
                 throw new IllegalStateException("Page can't be re-executed: execution in progress");
             }
         }
     }
 
     /**
-     * Determines whether the controlled page is currently in re-execution.
+     * Returns the state of the page (i.e. component) associated with this controller.
      *
-     * @return <code>true</code> if the page is in re-execution, otherwise <code>false</code>
+     * @return the page state as {@link NodeContainerState}
      */
-    boolean isPageReexecutionInProgress() {
-        return m_manager.getNodeContainer(m_nodeID).getNodeContainerState().isExecutionInProgress();
+    public NodeContainerState getSinglePageExecutionState() {
+        return m_manager.getNodeContainer(m_nodeID).getNodeContainerState();
     }
 
     /**

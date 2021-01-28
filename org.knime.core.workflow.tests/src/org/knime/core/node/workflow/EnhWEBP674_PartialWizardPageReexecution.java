@@ -81,7 +81,7 @@ public class EnhWEBP674_PartialWizardPageReexecution extends WorkflowTestCase {
 		WizardExecutionController wec = wfm.setAndGetWizardExecutionController();
 
 		IllegalStateException exception = assertThrows(IllegalStateException.class,
-				() -> wec.getSinglePageControllerForCurrentPage());
+				() -> wec.createOrGetSinglePageControllerForCurrentPage());
 		assertThat(exception.getMessage(), is("No current wizard page"));
 
 		// advance to first page
@@ -170,7 +170,7 @@ public class EnhWEBP674_PartialWizardPageReexecution extends WorkflowTestCase {
 		waitForPage(m_page2);
 
 		// re-execute second page
-		SinglePageWebResourceController sec = wec.getSinglePageControllerForCurrentPage();
+		SinglePageWebResourceController sec = wec.createOrGetSinglePageControllerForCurrentPage();
 		sec.reexecuteSinglePage(createNodeIDSuffix(6), Collections.emptyMap(), false);
 		Awaitility.await().atMost(5, TimeUnit.SECONDS).pollInterval(100, TimeUnit.MILLISECONDS).until(() -> {
 			WizardPageContent pc = wec.getCurrentWizardPage();
@@ -190,7 +190,7 @@ public class EnhWEBP674_PartialWizardPageReexecution extends WorkflowTestCase {
 		WorkflowManager wfm = getManager();
 		WizardExecutionController wec = wfm.setAndGetWizardExecutionController();
 
-		SinglePageWebResourceController sec = wec.getSinglePageControllerForCurrentPage();
+		SinglePageWebResourceController sec = wec.createOrGetSinglePageControllerForCurrentPage();
 		sec.reexecuteSinglePage(createNodeIDSuffix(7), createWizardPageInput(400000), false);
 		assertThat(wec.hasCurrentWizardPage(), is(true));
 		Awaitility.await().atMost(5, TimeUnit.SECONDS).pollInterval(100, TimeUnit.MILLISECONDS).untilAsserted(() -> {
@@ -204,7 +204,7 @@ public class EnhWEBP674_PartialWizardPageReexecution extends WorkflowTestCase {
 		WorkflowManager wfm = getManager();
 		WizardExecutionController wec = wfm.setAndGetWizardExecutionController();
 
-		SinglePageWebResourceController sec = wec.getSinglePageControllerForCurrentPage();
+		SinglePageWebResourceController sec = wec.createOrGetSinglePageControllerForCurrentPage();
 		sec.reexecuteSinglePage(createNodeIDSuffix(7), createWizardPageInput(0), false);
 		waitForPage(m_page1);
 		return sec;
@@ -231,7 +231,7 @@ public class EnhWEBP674_PartialWizardPageReexecution extends WorkflowTestCase {
 
 	private static void waitForSinglePageNotExecutingAnymore(SinglePageWebResourceController sec) {
 		Awaitility.await().atMost(5, TimeUnit.SECONDS).pollInterval(100, TimeUnit.MILLISECONDS)
-				.until(() -> !sec.isPageReexecutionInProgress());
+				.until(() -> !sec.getSinglePageExecutionState().isExecutionInProgress());
 	}
 
 	private static NodeIDSuffix createNodeIDSuffix(int... ids) {

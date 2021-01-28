@@ -511,11 +511,26 @@ public final class WizardExecutionController extends WebResourceController imple
      *         if there hasn't been one already)
      * @throws IllegalStateException if there is no current wizard page
      */
-    public SinglePageWebResourceController getSinglePageControllerForCurrentPage() {
+    public SinglePageWebResourceController createOrGetSinglePageControllerForCurrentPage() {
         if (m_singlePageController == null) {
             m_singlePageController = new SinglePageWebResourceController(m_manager, getCurrentWizardPageNodeID(), true);
         }
         return m_singlePageController;
+    }
+
+    /**
+     * Returns the single page execution state of the current page, iff there is a single page executor controller
+     * associated with the current page (i.e. {@link #createOrGetSinglePageControllerForCurrentPage()} has been called
+     * at least once for the current page).
+     *
+     * @return the execution state or and empty optional if the current page is not in single page execution
+     */
+    public Optional<NodeContainerState> getSinglePageExecutionState() {
+        if (m_singlePageController == null) {
+            return Optional.empty();
+        } else {
+            return Optional.of(m_singlePageController.getSinglePageExecutionState());
+        }
     }
 
     private void stepBackInternal() {
@@ -578,16 +593,13 @@ public final class WizardExecutionController extends WebResourceController imple
     private void doBeforePageChange(final boolean throwExceptionIfSinglePageReexecutionInProgress) {
         checkDiscard();
         if (m_singlePageController != null) {
-            if (throwExceptionIfSinglePageReexecutionInProgress && isSinglePageReexetionInProgress()) {
+            if (throwExceptionIfSinglePageReexecutionInProgress
+                && m_singlePageController.getSinglePageExecutionState().isExecutionInProgress()) {
                 throw new IllegalStateException("Action not allowed. Single page re-execution is in progress.");
             }
             m_singlePageController.invalidate();
             m_singlePageController = null;
         }
-    }
-
-    private boolean isSinglePageReexetionInProgress() {
-        return m_singlePageController != null && m_singlePageController.isPageReexecutionInProgress();
     }
 
 }
