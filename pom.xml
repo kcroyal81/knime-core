@@ -18,7 +18,7 @@
 		<changelist>-SNAPSHOT</changelist>
 		<feature-branch-extension.branchListProperty>git.branch</feature-branch-extension.branchListProperty>
 		<feature-branch-extension.appendArtifactoryProperties>false</feature-branch-extension.appendArtifactoryProperties>
-        <tycho.version>2.2.0</tycho.version>
+		<tycho.version>2.2.0</tycho.version>
 	</properties>
 
 	<profiles>
@@ -197,6 +197,20 @@
 
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.eclipse.tycho.extras</groupId>
+				<artifactId>tycho-dependency-tools-plugin</artifactId>
+				<version>$tycho.version}</version>
+				<executions>
+					<execution>
+						<id>list-dependencies</id>
+						<goals>
+							<goal>list-dependencies</goal>
+						</goals>
+						<phase>compile</phase>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.eclipse.tycho.extras</groupId>
 				<artifactId>tycho-source-feature-plugin</artifactId>
