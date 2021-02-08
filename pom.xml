@@ -200,7 +200,7 @@
 			<plugin>
 				<groupId>org.eclipse.tycho.extras</groupId>
 				<artifactId>tycho-dependency-tools-plugin</artifactId>
-				<version>$tycho.version}</version>
+				<version>${tycho.version}</version>
 				<executions>
 					<execution>
 						<id>list-dependencies</id>
