@@ -204,6 +204,9 @@
 				<executions>
 					<execution>
 						<id>list-dependencies</id>
+						<configuration>
+							<skip>true</skip>
+						</configuration>
 						<goals>
 							<goal>list-dependencies</goal>
 						</goals>
